@@ -12,15 +12,47 @@ from multiprocessing import Process
 # Utilities
 #============================================================================================#
 
-def build_mlp(
-        input_placeholder, 
-        output_size,
-        scope, 
-        n_layers=2, 
-        size=64, 
-        activation=tf.tanh,
-        output_activation=None
-        ):
+def create_architecture(input_placeholder, output_size, n_layers, size):
+        layers = []
+        for i in range(n_layers):
+            if (i == 0): #input layer
+                hidden_layer = {'weights':tf.Variable(tf.random_normal([len(input_placeholder[0]), size])), 
+                'biases':tf.Variable(tf.random_normal([size]))}
+                layers.append(hidden_layer)
+            elif (i == n_layers - 1): #Output layer
+                hidden_layer = {'weights':tf.Variable(tf.random_normal([size, output_size])), 
+                'biases':tf.Variable(tf.random_normal([output_size]))}
+                layers.append(hidden_layers)
+            else: #hidden layer
+                hidden_layer = {'weights':tf.Variable(tf.random_normal(size, size])), 
+                'biases':tf.Variable(tf.random_normal([size]))}
+                layers.append(hidden_layers)
+        return layers
+
+def run_nn(input_placeholder, output_size, n_layers, size, activation, output_activation):
+    layer_architecture = create_architecture(input_placeholder, output_size, n_layers, size)
+    layer_outputs = []
+    for j in range(len(layers)):
+        if (j == 0):
+            layers = tf.add(tf.matmul(data, layer_architecture[j]['weights']), layer_architecture[j]['biases'])
+            layers = activation(layers)
+            layer_outputs.append(layers)
+        elif (j == len(layers) - 1):
+            layers = tf.add(tf.matmul(layer_architecture[j-1], layer_architecture[j]['weights']), layer_architecture[j]['biases'])
+            layers = activation(layers)
+            layer_outputs.append(layers)
+        else:
+            layers = tf.add(tf.matmul(layer_architecture[j-1], layer_architecture[j]['weights']), layer_architecture[j]['biases'])
+            if (output_activation != None):
+                layers = activation(layers)
+            layer_outputs.append(layers)
+    return layer_functions(-1)
+
+
+
+def build_mlp(input_placeholder, output_size, n_layers=2, size=64, activation=tf.tanh,output_activation=None):
+
+
     #========================================================================================#
     #                           ----------SECTION 3----------
     # Network building
@@ -34,8 +66,31 @@ def build_mlp(
     #========================================================================================#
 
     with tf.variable_scope(scope):
-        # YOUR_CODE_HERE
-        pass
+        prediction = run_nn(input_placeholder, output_size, n_layers, size, activation, output_activation)
+        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=y))
+        optimizer = tf.train.AdamOptimizer().minimize(cost)
+        nm_epochs = 30
+        with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+
+        for epoch in range(nm_epochs):
+            epoch_loss = 0
+            i=0
+            while i < len(train_x):
+                start = i
+                end = i + batch_size
+                batch_x = np.array(train_x[start:end])
+                batch_y = np.array(train_y[start:end])
+
+                _,c = sess.run([optimizer, cost], feed_dict= {x: batch_x, y: batch_y})
+                epoch_loss += c
+                i += batch_size
+            print ('Epoch', epoch + 1, 'completed out of', nm_epochs, 'loss', epoch_loss)
+        correct = tf.equal(tf.argmax(prediction, 1), tf.argmax(y, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
+        print('Accuracy', accuracy.eval({x:train_x, y:train_y}))
+
+    pass
 
 def pathlength(path):
     return len(path["reward"])

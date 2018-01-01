@@ -39,7 +39,7 @@ def run_nn(input_placeholder, output_size, n_layers, size, activation, output_ac
             layer_outputs.append(layers)
         elif (j == len(layers) - 1):
             layers = tf.add(tf.matmul(layer_architecture[j-1], layer_architecture[j]['weights']), layer_architecture[j]['biases'])
-            layers = activation(layers)
+            layers = output_activation(layers)
             layer_outputs.append(layers)
         else:
             layers = tf.add(tf.matmul(layer_architecture[j-1], layer_architecture[j]['weights']), layer_architecture[j]['biases'])

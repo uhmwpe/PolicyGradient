@@ -11,7 +11,7 @@ from multiprocessing import Process
 #============================================================================================#
 # Utilities
 #============================================================================================#
-
+'''
 def create_architecture(input_placeholder, output_size, n_layers, size):
         layers = []
         for i in range(n_layers):
@@ -47,6 +47,7 @@ def run_nn(input_placeholder, output_size, n_layers, size, activation, output_ac
                 layers = activation(layers)
             layer_outputs.append(layers)
     return layer_functions(-1)
+'''
 
 
 
@@ -66,6 +67,14 @@ def build_mlp(input_placeholder, output_size, n_layers=2, size=64, activation=tf
     #========================================================================================#
 
     with tf.variable_scope(scope):
+        
+        
+        for _ in range(n_layers):
+            hidden_layers = tf.layers.dense(inputs=hidden_layers, units=size, activation=activation)
+        output = tf.layers.dense(inputs=hidden_layers, units=output_size, activation=output_activation)
+        return output
+
+        '''
         prediction = run_nn(input_placeholder, output_size, n_layers, size, activation, output_activation)
         cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=y))
         optimizer = tf.train.AdamOptimizer().minimize(cost)
@@ -89,7 +98,9 @@ def build_mlp(input_placeholder, output_size, n_layers=2, size=64, activation=tf
         correct = tf.equal(tf.argmax(prediction, 1), tf.argmax(y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
         print('Accuracy', accuracy.eval({x:train_x, y:train_y}))
-
+        return prediction
+        '''
+        
     pass
 
 def pathlength(path):
@@ -222,7 +233,7 @@ def train_PG(exp_name='',
 
     if discrete:
         # YOUR_CODE_HERE
-        sy_logits_na = TODO
+        sy_logits_na = 
         sy_sampled_ac = TODO # Hint: Use the tf.multinomial op
         sy_logprob_n = TODO
 

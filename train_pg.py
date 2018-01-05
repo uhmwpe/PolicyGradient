@@ -67,8 +67,8 @@ def build_mlp(input_placeholder, output_size, n_layers=2, size=64, activation=tf
     #========================================================================================#
 
     with tf.variable_scope(scope):
-        
-        
+
+        hidden_layers = input_placeholder
         for _ in range(n_layers):
             hidden_layers = tf.layers.dense(inputs=hidden_layers, units=size, activation=activation)
         output = tf.layers.dense(inputs=hidden_layers, units=output_size, activation=output_activation)
@@ -233,9 +233,10 @@ def train_PG(exp_name='',
 
     if discrete:
         # YOUR_CODE_HERE
-        sy_logits_na = 
-        sy_sampled_ac = TODO # Hint: Use the tf.multinomial op
-        sy_logprob_n = TODO
+        sy_logits_na = build_mlp(sy_ob_no, ac_dim, "policy", n_layers=n_layers, size=size) #Input observation, output action
+        sy_sampled_ac = tf.multinomial(sy_logits_na, 1) # Hint: Use the tf.multinomial op
+        sy_sampled_ac = tf.reshape(sy_sampled_ac, [-1]) # flattens the tensor
+        sy_logprob_n = -tf.nn.sparse_softmax_cross_entropy_with_logits(labels=sy_ac_na, logits=sy_logits_na)
 
     else:
         # YOUR_CODE_HERE

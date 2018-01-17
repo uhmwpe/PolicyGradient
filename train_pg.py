@@ -11,48 +11,10 @@ from multiprocessing import Process
 #============================================================================================#
 # Utilities
 #============================================================================================#
-'''
-def create_architecture(input_placeholder, output_size, n_layers, size):
-        layers = []
-        for i in range(n_layers):
-            if (i == 0): #input layer
-                hidden_layer = {'weights':tf.Variable(tf.random_normal([len(input_placeholder[0]), size])), 
-                'biases':tf.Variable(tf.random_normal([size]))}
-                layers.append(hidden_layer)
-            elif (i == n_layers - 1): #Output layer
-                hidden_layer = {'weights':tf.Variable(tf.random_normal([size, output_size])), 
-                'biases':tf.Variable(tf.random_normal([output_size]))}
-                layers.append(hidden_layers)
-            else: #hidden layer
-                hidden_layer = {'weights':tf.Variable(tf.random_normal(size, size])), 
-                'biases':tf.Variable(tf.random_normal([size]))}
-                layers.append(hidden_layers)
-        return layers
 
-def run_nn(input_placeholder, output_size, n_layers, size, activation, output_activation):
-    layer_architecture = create_architecture(input_placeholder, output_size, n_layers, size)
-    layer_outputs = []
-    for j in range(len(layers)):
-        if (j == 0):
-            layers = tf.add(tf.matmul(data, layer_architecture[j]['weights']), layer_architecture[j]['biases'])
-            layers = activation(layers)
-            layer_outputs.append(layers)
-        elif (j == len(layers) - 1):
-            layers = tf.add(tf.matmul(layer_architecture[j-1], layer_architecture[j]['weights']), layer_architecture[j]['biases'])
-            layers = output_activation(layers)
-            layer_outputs.append(layers)
-        else:
-            layers = tf.add(tf.matmul(layer_architecture[j-1], layer_architecture[j]['weights']), layer_architecture[j]['biases'])
-            if (output_activation != None):
-                layers = activation(layers)
-            layer_outputs.append(layers)
-    return layer_functions(-1)
-'''
 def normalize(data, mean=0.0, std=1.0):
-    n_data = (data - np.mean(data)) / (np.std(data) + 1e-8)
+    n_data = (data - np.mean(data)) / (np.std(data) + 1e-8) #add 1e-8 for smoothing purposes
     return n_data * (std + 1e-8) + mean
-
-
 
 def build_mlp(
         input_placeholder, 
@@ -83,33 +45,6 @@ def build_mlp(
             hidden_layers = tf.layers.dense(inputs=hidden_layers, units=size, activation=activation)
         output = tf.layers.dense(inputs=hidden_layers, units=output_size, activation=output_activation)
         return output
-
-        '''
-        prediction = run_nn(input_placeholder, output_size, n_layers, size, activation, output_activation)
-        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=y))
-        optimizer = tf.train.AdamOptimizer().minimize(cost)
-        nm_epochs = 30
-        with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-
-        for epoch in range(nm_epochs):
-            epoch_loss = 0
-            i=0
-            while i < len(train_x):
-                start = i
-                end = i + batch_size
-                batch_x = np.array(train_x[start:end])
-                batch_y = np.array(train_y[start:end])
-
-                _,c = sess.run([optimizer, cost], feed_dict= {x: batch_x, y: batch_y})
-                epoch_loss += c
-                i += batch_size
-            print ('Epoch', epoch + 1, 'completed out of', nm_epochs, 'loss', epoch_loss)
-        correct = tf.equal(tf.argmax(prediction, 1), tf.argmax(y, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
-        print('Accuracy', accuracy.eval({x:train_x, y:train_y}))
-        return prediction
-        '''
         
     pass
 
@@ -245,15 +180,17 @@ def train_PG(exp_name='',
         # YOUR_CODE_HERE
         sy_logits_na = build_mlp(sy_ob_no, ac_dim, "policy", n_layers=n_layers, size=size) #Input observation, output action
         sy_sampled_ac = tf.multinomial(sy_logits_na, 1) # Hint: Use the tf.multinomial op
-        sy_sampled_ac = tf.reshape(sy_sampled_ac, [-1]) # flattens the tensor
+        sy_sampled_ac = tf.reshape(sy_sampled_ac, [-1]) # flattens the tensor to feed into MLP
         sy_logprob_n = -tf.nn.sparse_softmax_cross_entropy_with_logits(labels=sy_ac_na, logits=sy_logits_na)
 
     else:
         # YOUR_CODE_HERE
         sy_mean = build_mlp(sy_ob_no, ac_dim, "policy", n_layers=n_layers, size=size) #return output from neural network
         sy_logstd = tf.Variable(tf.zeros([1,ac_dim]), name="policy/logstd", dtype=tf.float32) # distribution of actions logstd should just be a trainable variable, not a network output.
-        sy_sampled_ac = sy_mean + tf.exp(sy_logstd) * tf.random_normal(tf.shape(sy_mean)) # take output of neural network (action defined by policy)
+        sigma = tf.exp(sy_logstd)
+        sy_sampled_ac = sy_mean + sigma * tf.random_normal(tf.shape(sy_mean)) # take output of neural network (action defined by policy)
         #then give it the variation as supplied by sy_logstd to show a continuous distribution
+        #sy_mean = mu, tf.exp(sy_logstd) (sigma), tf.random_normal(tf.shape(sy_mean)) (z) -> sampling from gaussian
 
         temp_z = (sy_ac_na - sy_mean) / tf.exp(sy_logstd)
         sy_logprob_n = -0.5 * tf.reduce_sum(tf.square(temp_z), axis=1)  # Hint: Use the log probability under a multivariate gaussian. 
@@ -319,7 +256,7 @@ def train_PG(exp_name='',
             animate_this_episode=(len(paths)==0 and (itr % 10 == 0) and animate)
             steps = 0
             while True:
-                if animate_this_episode:
+                if (itr == 99):
                     env.render()
                     time.sleep(0.05)
                 obs.append(ob)
@@ -405,7 +342,7 @@ def train_PG(exp_name='',
             q_path = []
 
             for rew in reversed(path["reward"]):
-                q = rew  + gamma * q
+                q = rew  + gamma * q #defining advantage function q
                 q_path.append(q)
             q_path.reverse()
 
